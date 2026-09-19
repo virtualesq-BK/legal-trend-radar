@@ -13,15 +13,13 @@ node_modules/
 out/
 frontend/.env.local
 
-# Data (never commit real/raw/processed data)
+# Data: raw API dumps are never committed (regenerate via collect_precedents.py).
+# processed/ and analysis/ ARE committed once real data has been collected
+# and validated (see README "실제 데이터 수집 현황") - Render's free tier has
+# no persistent disk, so the deployed backend needs these shipped in the repo
+# to serve real data immediately after deploy, rather than fake/empty data.
 backend/data/raw/*
 !backend/data/raw/.gitkeep
-backend/data/processed/*
-!backend/data/processed/.gitkeep
-backend/data/analysis/*
-!backend/data/analysis/.gitkeep
-reports/figures/*
-!reports/figures/.gitkeep
 
 # Env files
 .env
