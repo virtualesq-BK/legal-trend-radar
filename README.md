@@ -11,6 +11,21 @@ FastAPI 백엔드와 Next.js 대시보드로 제공합니다.
 > **예측하지 않습니다**. 법률적 판단이 필요한 경우 반드시 변호사와
 > 상담하십시오.
 
+## 배포 (Live Demo)
+
+- **프론트엔드 (Vercel):** https://legal-trend-radar.vercel.app/dashboard
+- **백엔드 (Render):** https://legal-trend-radar-backend.onrender.com
+  (API 문서: `/docs`, 헬스체크: `/health`)
+- 소스: https://github.com/virtualesq-BK/legal-trend-radar
+
+두 서비스 모두 실제 수집·정제된 판례 데이터(3,133건)로 서빙됩니다. Render
+무료 플랜은 영구 디스크가 없어 백엔드 배포 시 파이프라인을 다시 돌릴 수
+없으므로, 이미 실제 API로 수집·검증된 `backend/data/processed/`와
+`backend/data/analysis/` 결과물을 레포에 커밋해 배포와 함께 제공합니다
+(원본 raw JSON 덤프는 재현성 확인용으로만 필요하므로 계속 gitignore 처리).
+Render 무료 인스턴스는 일정 시간 요청이 없으면 슬립 상태가 되어 첫 요청
+응답이 몇십 초 정도 걸릴 수 있습니다.
+
 ## 아키텍처
 
 전체 파이프라인 다이어그램은 `docs/ARCHITECTURE.md`를 참고하세요:
