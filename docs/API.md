@@ -28,13 +28,18 @@ a raw 500 when data is missing.
 | GET | `/api/v1/export/monthly?format=csv\|json` | Download the monthly trend table as a file (`Content-Disposition: attachment`) |
 | POST | `/api/v1/chat` | Body `{"message": "...", "session_id": "default"}`. GPT function-calling endpoint - the model calls one or more tools from `app/services/tools_service.py` to fetch real data before answering. Returns `{"answer", "tool_calls": [{"name","arguments","error"}]}`. Requires `OPENAI_API_KEY`; returns 503 `[BLOCKED]` otherwise. Each turn is also best-effort persisted to Firestore's `conversations` collection if configured. See README "보너스 과제" for the full call-flow walkthrough. |
 | GET | `/api/v1/firestore/status` | Whether Firestore (`FIREBASE_CREDENTIALS_JSON`) is configured and reachable |
+| GET | `/api/v1/conversations/sessions` | List distinct chat sessions (session_id, turn_count, last_message, last_timestamp), most recent first |
 | GET | `/api/v1/conversations?session_id=...` | Read back a chat session's history from Firestore's `conversations` collection (503 `[BLOCKED]` if Firestore isn't configured) |
+| GET | `/api/v1/data/records` | List all user-managed `(date, value, memo)` records from Firestore's `data` collection |
+| POST | `/api/v1/data/records` | Body `{"date","value","memo"}`. Create a record; returns 201 + the created record with its `id` |
+| PUT | `/api/v1/data/records/{id}` | Body `{"date"?,"value"?,"memo"?}`. Patch a record (404 if not found) |
+| DELETE | `/api/v1/data/records/{id}` | Delete a record (404 if not found) |
 
 Interactive OpenAPI docs are available at `/docs` when the server is running.
 
 ## MCP Server (second integration channel)
 
-`backend/mcp_server.py` exposes the exact same 6 tools as `/api/v1/chat` via
+`backend/mcp_server.py` exposes the exact same 7 tools as `/api/v1/chat` via
 the [Model Context Protocol](https://modelcontextprotocol.io), so any MCP
 client (Claude Desktop, another agent) can call them directly:
 

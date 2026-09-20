@@ -14,8 +14,9 @@ FastAPI 백엔드와 Next.js 대시보드로 제공합니다.
 ## 배포 (Live Demo)
 
 - **프론트엔드 (Vercel):** https://legal-trend-radar.vercel.app/dashboard
-- **백엔드 (Render):** https://legal-trend-radar-backend.onrender.com
-  (API 문서: `/docs`, 헬스체크: `/health`)
+- **백엔드 API (Render):** https://legal-trend-radar-backend.onrender.com
+- **Swagger UI (API 문서):** https://legal-trend-radar-backend.onrender.com/docs
+- 헬스체크: https://legal-trend-radar-backend.onrender.com/health
 - 소스: https://github.com/virtualesq-BK/legal-trend-radar
 
 두 서비스 모두 실제 수집·정제된 판례 데이터(3,133건)로 서빙됩니다. Render
@@ -282,22 +283,53 @@ Google Cloud Firestore를 사용해 분석 데이터와 대화 기록을 영구 
 잘못돼도 앱은 크래시하지 않고 해당 기능만 "not configured"로 비활성화됩니다
 (`OPENAI_API_KEY`와 동일한 선택적 연동 원칙).
 
-**컬렉션 구조:**
+**컬렉션 구조:** (`data` 컬렉션은 `kind` 필드로 두 종류의 문서를 함께 보관)
 
-| 컬렉션 | 문서 ID | 용도 | 쓰는 곳 |
-|---|---|---|---|
-| `data` | 분석 실행 시각(`collected_at`) | 파이프라인 실행 결과 스냅샷(전체 판례 수, 월별/연별 추이, 통계, forecast 지표)을 타임스탬프별로 누적 저장 — 재실행해도 기존 기록을 덮어쓰지 않음 | `backend/scripts/sync_firestore.py` → `firestore_service.save_analysis_snapshot()` |
-| `conversations` | 자동 생성 UUID | `/api/v1/chat` 한 턴(질문, 호출된 도구, 최종 답변, `session_id`, 타임스탬프)을 매번 기록 | `chat_service.run_chat()` → `firestore_service.save_conversation_turn()` (best-effort — Firestore 오류가 채팅 응답 자체를 막지 않음) |
+| 컬렉션 | 문서 ID | `kind` | 용도 | 쓰는 곳 |
+|---|---|---|---|---|
+| `data` | `collected_at` 타임스탬프 | `snapshot` | 파이프라인 실행 결과 스냅샷(전체 판례 수, 월별/연별 추이, 통계, forecast 지표) — 재실행해도 기존 기록을 덮어쓰지 않음 | `backend/scripts/sync_firestore.py` → `save_analysis_snapshot()` |
+| `data` | 자동 생성 UUID | `record` | 사용자가 CRUD 화면에서 직접 추가한 `(date, value, memo)` 데이터 포인트 | `app/api/routes/data_records.py` → `create/update/delete_data_record()` |
+| `conversations` | 자동 생성 UUID | - | `/api/v1/chat` 한 턴(질문, 호출된 도구, 최종 답변, `session_id`, 타임스탬프)을 매번 기록 | `chat_service.run_chat()` → `save_conversation_turn()` (best-effort — Firestore 오류가 채팅 응답 자체를 막지 않음) |
 
-조회 API: `GET /api/v1/firestore/status` (연동 상태), `GET
-/api/v1/conversations?session_id=...` (해당 세션의 대화 기록 조회).
+**핵심 기능 4가지 (Firestore 기반):**
 
-**동기화 실행:**
+1. **데이터 기반 AI 채팅** — `POST /api/v1/chat`에 자연어 질문을 보내면 GPT가
+   `get_saved_data_summary` 등 도구를 호출해 Firestore에 저장된 실제 데이터를
+   근거로 답변합니다. 프론트엔드 `ChatPanel.tsx`가 요청 중 "생각 중..." 로딩
+   표시를 보여주고, 답변과 함께 실제 호출된 도구를 표시합니다.
+2. **데이터 관리 (CRUD)** — `GET/POST/PUT/DELETE /api/v1/data/records`로
+   `(date, value, memo)` 레코드를 추가/수정/삭제합니다. `DataManager.tsx`가
+   목록을 자동 갱신하고 저장 결과 메시지("저장되었습니다"/"삭제되었습니다")를
+   보여줍니다.
+3. **대화 기록 저장 및 불러오기** — 모든 채팅 턴은 자동으로 `conversations`
+   컬렉션에 저장됩니다. `GET /api/v1/conversations/sessions`로 저장된 대화
+   세션 목록을 조회하고, `GET /api/v1/conversations?session_id=...`로 특정
+   대화를 불러옵니다. `ConversationHistory.tsx`가 목록 클릭 시 해당 대화의
+   질문/답변을 재표시합니다.
+4. **배포 및 문서화** — 아래 "배포 (Live Demo)" 섹션과 이 문서 전체가 해당
+   항목입니다.
+
+기타 조회 API: `GET /api/v1/firestore/status` (연동 상태 확인).
+
+**동기화 실행 (분석 스냅샷):**
 ```powershell
 cd backend
 uv run python scripts/sync_firestore.py
 ```
 또는 `make sync-firestore`.
+
+## 제출 스크린샷
+
+1. **데이터 요약이 보이는 채팅 화면** (질문 + AI 답변 + 호출된 도구):
+   ![AI 채팅 화면](docs/screenshots/chat.png)
+2. **데이터 관리 화면** (CRUD 중 추가 동작 — 저장 확인 메시지와 갱신된 목록):
+   ![데이터 관리 화면](docs/screenshots/data_manager.png)
+3. **대화 기록 화면** (세션 목록에서 선택 → 불러오기 동작):
+   ![대화 기록 화면](docs/screenshots/conversation_history.png)
+
+모든 스크린샷은 실제 배포 URL(https://legal-trend-radar.vercel.app/dashboard)을
+Playwright로 직접 조작해 캡처했으며, 표시된 데이터는 실제 Firestore
+프로젝트에 저장된 값입니다.
 
 ## 구현 노트 (실제 데이터 실행 중 수정한 사항)
 
