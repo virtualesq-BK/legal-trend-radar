@@ -10,6 +10,7 @@ import {
   DecompositionPoint,
   ForecastResponse,
   InsightsResponse,
+  StatisticsResponse,
 } from "@/types";
 import SummaryCards from "@/components/SummaryCards";
 import TrendChart from "@/components/TrendChart";
@@ -20,6 +21,11 @@ import AnomalyChart from "@/components/AnomalyChart";
 import DecompositionChart from "@/components/DecompositionChart";
 import ForecastChart from "@/components/ForecastChart";
 import InsightCard from "@/components/InsightCard";
+import YoYChart from "@/components/YoYChart";
+import StatisticsPanel from "@/components/StatisticsPanel";
+import ExportButtons from "@/components/ExportButtons";
+import ThemeToggle from "@/components/ThemeToggle";
+import ChatPanel from "@/components/ChatPanel";
 
 interface DashboardData {
   summary: SummaryResponse;
@@ -30,6 +36,7 @@ interface DashboardData {
   decomposition: DecompositionPoint[] | null;
   forecast: ForecastResponse | null;
   insights: InsightsResponse;
+  statistics: StatisticsResponse | null;
 }
 
 export default function DashboardPage() {
@@ -65,8 +72,24 @@ export default function DashboardPage() {
         } catch {
           forecast = null;
         }
+        let statistics: StatisticsResponse | null = null;
+        try {
+          statistics = (await api.statistics()) as StatisticsResponse;
+        } catch {
+          statistics = null;
+        }
         if (!cancelled) {
-          setData({ summary, monthly, yearly, keywords, anomalies, decomposition, forecast, insights });
+          setData({
+            summary,
+            monthly,
+            yearly,
+            keywords,
+            anomalies,
+            decomposition,
+            forecast,
+            insights,
+            statistics,
+          });
         }
       } catch (e) {
         if (!cancelled) {
@@ -123,14 +146,24 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto flex flex-col gap-8">
-      <header>
-        <h1 className="text-2xl font-bold">Legal Trend Radar 대시보드</h1>
-        <p className="text-sm text-gray-500">
-          데이터 출처: 국가법령정보센터 Open API · 수집 시각: {data.summary.data_collected_at ?? "N/A"}
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Legal Trend Radar 대시보드</h1>
+          <p className="text-sm text-gray-500">
+            데이터 출처: 국가법령정보센터 Open API · 수집 시각: {data.summary.data_collected_at ?? "N/A"}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <ExportButtons />
+          <ThemeToggle />
+        </div>
       </header>
 
       <SummaryCards summary={data.summary} monthly={data.monthly} anomalies={data.anomalies} />
+
+      <section className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <StatisticsPanel stats={data.statistics} />
+      </section>
 
       <section className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
         <TrendChart data={data.monthly} />
@@ -144,6 +177,10 @@ export default function DashboardPage() {
           <MovingAverageChart data={data.monthly} />
         </section>
       </div>
+
+      <section className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <YoYChart data={data.monthly} />
+      </section>
 
       <section className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
         <KeywordChart data={data.keywords} />
@@ -173,6 +210,10 @@ export default function DashboardPage() {
 
       <section>
         <InsightCard insights={data.insights} />
+      </section>
+
+      <section className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <ChatPanel />
       </section>
 
       <footer className="text-xs text-gray-500 border-t pt-4 mt-4">

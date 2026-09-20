@@ -79,3 +79,29 @@ export interface ApiError {
   blocked: true;
   message: string;
 }
+
+export interface StatisticsResponse {
+  median_monthly_count: number | null;
+  std_monthly_count: number | null;
+  mean_monthly_count: number | null;
+  total_count: number | null;
+  total_months: number;
+  growth_rate_pct_full_period: number | null;
+  anomaly_rate_pct: number | null;
+  peak_month: { period: string; count: number } | null;
+  trough_month: { period: string; count: number } | null;
+  note: string;
+}
+
+export interface ChatToolCall {
+  name: string;
+  arguments: Record<string, unknown>;
+  error: string | null;
+}
+
+export interface ChatResponse {
+  available: boolean;
+  answer: string | null;
+  tool_calls: ChatToolCall[];
+  reason: string | null;
+}

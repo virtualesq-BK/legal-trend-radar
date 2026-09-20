@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Class-based dark mode (toggled by ThemeToggle.tsx via .dark on <html>),
+   instead of Tailwind's v4 default of following prefers-color-scheme only -
+   this is what makes a manual light/dark toggle button possible. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -12,11 +17,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 body {

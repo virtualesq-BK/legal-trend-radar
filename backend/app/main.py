@@ -3,7 +3,17 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import anomalies, forecast, health, insights, precedents, trends
+from app.api.routes import (
+    anomalies,
+    chat,
+    export,
+    forecast,
+    health,
+    insights,
+    precedents,
+    statistics,
+    trends,
+)
 
 app = FastAPI(
     title="Legal Trend Radar API",
@@ -27,3 +37,6 @@ app.include_router(trends.router)
 app.include_router(anomalies.router)
 app.include_router(forecast.router)
 app.include_router(insights.router)
+app.include_router(statistics.router)
+app.include_router(export.router)
+app.include_router(chat.router)

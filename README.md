@@ -187,6 +187,87 @@ npm run dev
 ```
 대시보드: http://localhost:3000/dashboard
 
+## 보너스 과제
+
+### 1) AI 도구 호출 (Function Calling) + 멀티채널 연동
+
+**설계 원칙:** GPT는 통계 수치를 직접 알지 못합니다. 질문에 답하려면 반드시
+아래 "도구(tool)" 중 하나 이상을 호출해서 실제 파이프라인 데이터를 가져와야
+하며, 이는 GPT function calling과 MCP 두 채널 모두에서 **동일한 코드**를
+호출하도록 만들어 두 채널이 서로 다른 답을 낼 수 없게 했습니다.
+
+```
+backend/app/services/tools_service.py   ← 도구 스키마 + 함수 (단일 소스)
+        ├── get_monthly_trend(limit)
+        ├── get_yearly_trend()
+        ├── get_keyword_trend(keyword?)
+        ├── get_anomalies(only_flagged)
+        ├── get_forecast()
+        └── get_statistics()
+              │
+              ├── POST /api/v1/chat  (OpenAI function calling, app/services/chat_service.py)
+              └── mcp_server.py      (MCP Server, stdio transport)
+```
+
+**호출 흐름 (예: "최근 이상치가 언제 발생했어?"):**
+1. 사용자가 `/api/v1/chat`에 자연어 질문을 보냄 (원시 데이터는 전혀 함께
+   보내지 않음, 도구 스키마만 GPT에 전달).
+2. GPT가 질문을 분석해 어떤 도구가 필요한지 스스로 판단 → 이 예시에서는
+   `get_anomalies(only_flagged=true)` 호출을 요청.
+3. 백엔드가 실제로 `tools_service.tool_get_anomalies()`를 실행해 (이미
+   수집·검증된 실데이터 기준) 결과를 GPT에 다시 전달.
+4. GPT가 도구 결과만 근거로 최종 답변을 생성 (숫자 임의 생성 금지, 근거 없는
+   주장 금지 — `chat_service.py`의 시스템 프롬프트로 강제).
+5. API 응답에 `tool_calls` 배열로 **어떤 도구를, 어떤 인자로, 성공/실패
+   여부와 함께** 호출했는지 그대로 노출 → 대시보드의 "AI에게 데이터
+   질문하기" 패널(`ChatPanel.tsx`)에서 답변 아래에 실제 호출 로그로
+   표시됩니다.
+
+실제 호출 예시 (2026-09-20 로컬 검증):
+```
+POST /api/v1/chat  {"message": "이 데이터에서 이상치가 몇 개 감지됐고, 가장 최근 이상치는 언제야?"}
+→ tool_calls: [{"name": "get_anomalies", "arguments": {"only_flagged": true}}]
+→ answer: "...가장 최근 이상치는 2026-08이며... (출처: get_anomalies 결과)"
+```
+
+**두 번째 채널 (MCP Server):** `backend/mcp_server.py`가 동일한 6개 도구를
+[MCP](https://modelcontextprotocol.io) 서버로 노출합니다. Claude Desktop 등
+MCP 클라이언트에서 아래처럼 등록하면 GPT 채팅 없이도 동일한 함수를 직접 호출할
+수 있습니다:
+```json
+{
+  "mcpServers": {
+    "legal-trend-radar": {
+      "command": "uv",
+      "args": ["run", "--directory", "<repo>/backend", "python", "mcp_server.py"]
+    }
+  }
+}
+```
+로컬에서 도구 목록/호출을 직접 검증하려면:
+```powershell
+cd backend
+uv run python -c "import mcp_server, asyncio; print(asyncio.run(mcp_server.mcp.list_tools()))"
+uv run python -c "import mcp_server, asyncio; print(asyncio.run(mcp_server.mcp.call_tool('get_statistics', {})))"
+```
+
+### 2) 인사이트·UX 고도화
+
+- **통계 API 확장:** `GET /api/v1/data/statistics` 신규 엔드포인트로 중앙값,
+  표준편차, 전체 기간 증감률(growth rate), 이상치 비율, 최고/최저 월 등
+  기존 `/precedents/summary`에 없던 지표를 제공합니다. 대시보드의
+  "상세 통계" 패널(`StatisticsPanel.tsx`)에서 표시됩니다.
+- **신규 시각화:** `YoYChart.tsx` — 기존에 데이터에는 있었지만 별도
+  그래프가 없었던 전년 동월 대비 증감률(YoY %)을 막대그래프로 시각화
+  (양수/음수를 색으로 구분).
+- **데이터 내보내기:** `GET /api/v1/export/monthly?format=csv|json`로 월별
+  추이 데이터를 CSV/JSON으로 다운로드할 수 있습니다. 대시보드 헤더의
+  "⬇ CSV 다운로드"/"⬇ JSON 다운로드" 버튼에서 바로 사용 가능합니다.
+- **다크 모드 토글:** 헤더의 🌙/☀️ 버튼으로 라이트/다크 테마를 전환하며,
+  `localStorage`에 저장되어 다음 방문 시에도 유지됩니다 (Tailwind v4의
+  `@custom-variant dark` + `.dark` 클래스 전략, `layout.tsx`의 초기화
+  스크립트로 첫 렌더링 시 깜빡임 방지).
+
 ## 구현 노트 (실제 데이터 실행 중 수정한 사항)
 
 실제 API로 실행하는 과정에서 몇 가지 문제가 발견되어 아래와 같이

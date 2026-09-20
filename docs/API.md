@@ -24,5 +24,22 @@ a raw 500 when data is missing.
 | GET | `/api/v1/insights` | AI-generated structured insight (or "unavailable" message if no `OPENAI_API_KEY`) |
 | GET | `/api/v1/metadata` | Data source name, default keywords/date range, legal disclaimer |
 | POST | `/api/v1/collect` | Guidance response pointing to the CLI collector (long-running collection is intentionally not run synchronously over HTTP) |
+| GET | `/api/v1/data/statistics` | Enriched stats: median, std dev, full-period growth rate, anomaly rate, peak/trough month |
+| GET | `/api/v1/export/monthly?format=csv\|json` | Download the monthly trend table as a file (`Content-Disposition: attachment`) |
+| POST | `/api/v1/chat` | Body `{"message": "..."}`. GPT function-calling endpoint - the model calls one or more tools from `app/services/tools_service.py` to fetch real data before answering. Returns `{"answer", "tool_calls": [{"name","arguments","error"}]}`. Requires `OPENAI_API_KEY`; returns 503 `[BLOCKED]` otherwise. See README "보너스 과제" for the full call-flow walkthrough. |
 
 Interactive OpenAPI docs are available at `/docs` when the server is running.
+
+## MCP Server (second integration channel)
+
+`backend/mcp_server.py` exposes the exact same 6 tools as `/api/v1/chat` via
+the [Model Context Protocol](https://modelcontextprotocol.io), so any MCP
+client (Claude Desktop, another agent) can call them directly:
+
+```powershell
+cd backend
+uv run python mcp_server.py   # stdio transport
+```
+
+Both channels call the same functions in `app/services/tools_service.py`, so
+they can never disagree about what a tool returns.
