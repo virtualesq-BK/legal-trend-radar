@@ -105,3 +105,34 @@ export interface ChatResponse {
   tool_calls: ChatToolCall[];
   reason: string | null;
 }
+
+export interface DataRecord {
+  id: string;
+  date: string;
+  value: number;
+  memo: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationSession {
+  session_id: string;
+  turn_count: number;
+  last_message: string | null;
+  last_timestamp: string | null;
+}
+
+export interface ConversationTurn {
+  session_id: string;
+  user_message: string;
+  answer: string | null;
+  tool_calls: ChatToolCall[];
+  available: boolean;
+  timestamp: string;
+}
+
+export interface ConversationHistoryResponse {
+  available: boolean;
+  reason: string | null;
+  turns: ConversationTurn[];
+}

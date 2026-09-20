@@ -34,6 +34,7 @@ from app.services.tools_service import (  # noqa: E402
     tool_get_forecast,
     tool_get_keyword_trend,
     tool_get_monthly_trend,
+    tool_get_saved_data_summary,
     tool_get_statistics,
     tool_get_yearly_trend,
 )
@@ -75,6 +76,12 @@ def get_forecast() -> dict:
 def get_statistics() -> dict:
     """Return enriched summary statistics (median, growth rate, anomaly rate, peak/trough month)."""
     return tool_get_statistics()
+
+
+@mcp.tool()
+def get_saved_data_summary() -> dict:
+    """Return a summary of the user's manually saved (date, value, memo) records in Firestore."""
+    return tool_get_saved_data_summary()
 
 
 if __name__ == "__main__":

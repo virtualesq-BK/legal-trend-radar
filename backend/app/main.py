@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import (
     anomalies,
     chat,
+    data_records,
     export,
     firestore,
     forecast,
@@ -42,3 +43,4 @@ app.include_router(statistics.router)
 app.include_router(export.router)
 app.include_router(chat.router)
 app.include_router(firestore.router)
+app.include_router(data_records.router)

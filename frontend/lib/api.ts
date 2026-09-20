@@ -51,6 +51,26 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function sendJson<T>(method: "PUT" | "DELETE", path: string, body?: unknown): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiBlockedError(
+      `백엔드(${API_URL})에 연결할 수 없습니다. FastAPI 서버가 실행 중인지 확인하세요.`
+    );
+  }
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({ detail: `API 오류 (${res.status}): ${path}` }));
+    throw new ApiBlockedError(errBody.detail);
+  }
+  return res.json() as Promise<T>;
+}
+
 export const api = {
   health: () => getJson("/health"),
   summary: () => getJson("/api/v1/precedents/summary"),
@@ -64,7 +84,20 @@ export const api = {
   insights: () => getJson("/api/v1/insights"),
   metadata: () => getJson("/api/v1/metadata"),
   statistics: () => getJson("/api/v1/data/statistics"),
-  chat: (message: string) => postJson("/api/v1/chat", { message }),
+  chat: (message: string, sessionId: string) => postJson("/api/v1/chat", { message, session_id: sessionId }),
+
+  // Data management (CRUD)
+  listRecords: () => getJson("/api/v1/data/records"),
+  createRecord: (date: string, value: number, memo: string | null) =>
+    postJson("/api/v1/data/records", { date, value, memo }),
+  updateRecord: (id: string, patch: { date?: string; value?: number; memo?: string | null }) =>
+    sendJson("PUT", `/api/v1/data/records/${id}`, patch),
+  deleteRecord: (id: string) => sendJson("DELETE", `/api/v1/data/records/${id}`),
+
+  // Conversation history
+  listSessions: () => getJson("/api/v1/conversations/sessions"),
+  getConversation: (sessionId: string) =>
+    getJson(`/api/v1/conversations?session_id=${encodeURIComponent(sessionId)}`),
 };
 
 // Direct-link download URLs (not fetch()'d - the browser downloads them).

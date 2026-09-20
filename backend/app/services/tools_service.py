@@ -23,6 +23,7 @@ from app.infrastructure.repositories import (
     load_monthly,
     load_yearly,
 )
+from app.services.firestore_service import list_data_records
 from app.services.statistics_service import compute_statistics
 
 
@@ -69,6 +70,31 @@ def tool_get_forecast() -> dict[str, Any]:
 def tool_get_statistics() -> dict[str, Any]:
     """Return enriched summary statistics (median, growth rate, anomaly rate, peak/trough month)."""
     return compute_statistics(load_monthly(), load_anomalies())
+
+
+def tool_get_saved_data_summary() -> dict[str, Any]:
+    """Return a summary of the user's manually saved (date, value, memo) records in Firestore.
+
+    Use this when the user asks about "저장된 데이터"/"내가 추가한 데이터" - the
+    records they created through the Data Management (CRUD) screen - as
+    opposed to the automatically collected precedent trend data.
+    """
+    result = list_data_records()
+    if not result["available"]:
+        return {"available": False, "reason": result["reason"], "records": []}
+    records = result["records"]
+    values = [r["value"] for r in records if isinstance(r.get("value"), (int, float))]
+    return {
+        "available": True,
+        "count": len(records),
+        "date_range": {
+            "start": records[0]["date"] if records else None,
+            "end": records[-1]["date"] if records else None,
+        },
+        "value_sum": sum(values) if values else None,
+        "value_mean": (sum(values) / len(values)) if values else None,
+        "records": records,
+    }
 
 
 # OpenAI function-calling / MCP tool schemas. Kept intentionally small and
@@ -146,6 +172,14 @@ TOOL_SPECS: list[dict[str, Any]] = [
             "parameters": {"type": "object", "properties": {}},
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_saved_data_summary",
+            "description": tool_get_saved_data_summary.__doc__,
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
 ]
 
 TOOL_FUNCTIONS: dict[str, Callable[..., dict[str, Any]]] = {
@@ -155,4 +189,5 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict[str, Any]]] = {
     "get_anomalies": tool_get_anomalies,
     "get_forecast": tool_get_forecast,
     "get_statistics": tool_get_statistics,
+    "get_saved_data_summary": tool_get_saved_data_summary,
 }

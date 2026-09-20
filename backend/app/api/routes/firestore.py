@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 
 from app.infrastructure.firestore_client import firestore_status
-from app.services.firestore_service import list_conversation_history
+from app.services.firestore_service import list_conversation_history, list_conversation_sessions
 
 router = APIRouter()
 
@@ -14,10 +14,19 @@ def status():
     return firestore_status()
 
 
+@router.get("/api/v1/conversations/sessions")
+def sessions():
+    """List distinct chat sessions (most recent first) for a 'past conversations' UI."""
+    result = list_conversation_sessions()
+    if not result["available"]:
+        raise HTTPException(status_code=503, detail=f"[BLOCKED] {result['reason']}")
+    return result["sessions"]
+
+
 @router.get("/api/v1/conversations")
 def conversations(session_id: str = Query("default")):
     """Read back a chat session's history from the `conversations` collection."""
     result = list_conversation_history(session_id)
     if not result["available"]:
-        raise HTTPException(status_code=503, detail=result["reason"])
+        raise HTTPException(status_code=503, detail=f"[BLOCKED] {result['reason']}")
     return result

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { ChatResponse, ChatToolCall } from "@/types";
 
@@ -7,24 +7,44 @@ const SUGGESTIONS = [
   "최근 이상치가 감지된 시점은 언제야?",
   "전체 기간 증감률을 알려줘",
   "Forecast 결과를 요약해줘",
+  "내가 저장한 데이터 요약해줘",
 ];
+
+function getOrCreateSessionId(): string {
+  try {
+    const existing = localStorage.getItem("chat_session_id");
+    if (existing) return existing;
+    const fresh = crypto.randomUUID();
+    localStorage.setItem("chat_session_id", fresh);
+    return fresh;
+  } catch {
+    return "default";
+  }
+}
 
 // Demonstrates the Function Calling bonus feature end-to-end in the UI:
 // the user's question goes to GPT with tool schemas only (no data), GPT
 // decides which backend tool(s) to call, and the actual tool call trace is
 // shown so it's visible *which* tool was invoked and with what arguments.
+// Every question/answer here is also saved to Firestore under `sessionId`
+// (see ConversationHistory.tsx for browsing/reloading past sessions).
 export default function ChatPanel() {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ChatResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState("default");
+
+  useEffect(() => {
+    setSessionId(getOrCreateSessionId());
+  }, []);
 
   async function ask(q: string) {
     setLoading(true);
     setError(null);
     setResult(null);
     try {
-      const res = (await api.chat(q)) as ChatResponse;
+      const res = (await api.chat(q, sessionId)) as ChatResponse;
       setResult(res);
     } catch (e) {
       setError(e instanceof Error ? e.message : "요청 중 오류가 발생했습니다.");

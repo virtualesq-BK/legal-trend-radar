@@ -26,6 +26,8 @@ import StatisticsPanel from "@/components/StatisticsPanel";
 import ExportButtons from "@/components/ExportButtons";
 import ThemeToggle from "@/components/ThemeToggle";
 import ChatPanel from "@/components/ChatPanel";
+import DataManager from "@/components/DataManager";
+import ConversationHistory from "@/components/ConversationHistory";
 
 interface DashboardData {
   summary: SummaryResponse;
@@ -214,6 +216,14 @@ export default function DashboardPage() {
 
       <section className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
         <ChatPanel />
+      </section>
+
+      <section className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <DataManager />
+      </section>
+
+      <section className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <ConversationHistory />
       </section>
 
       <footer className="text-xs text-gray-500 border-t pt-4 mt-4">
