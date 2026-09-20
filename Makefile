@@ -1,4 +1,4 @@
-.PHONY: install collect normalize analyze decompose forecast report test lint backend frontend all
+.PHONY: install collect normalize analyze decompose forecast report sync-firestore test lint backend frontend all
 
 install:
 	cd backend && uv sync --extra dev
@@ -22,6 +22,9 @@ forecast:
 
 report:
 	cd backend && uv run python scripts/generate_report.py
+
+sync-firestore:
+	cd backend && uv run python scripts/sync_firestore.py
 
 test:
 	cd backend && uv run pytest -q

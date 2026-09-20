@@ -43,6 +43,16 @@ class Settings(BaseSettings):
     forecast_horizon: int = 6
     run_integration_tests: bool = False
 
+    # Firestore service account key, as raw JSON content (NOT a file path) -
+    # this is what makes it safe to store as a single secret env var on
+    # Render/Vercel/CI instead of committing a service-account .json file to
+    # the repo. Paste the entire downloaded key file's contents as one line.
+    firebase_credentials_json: str = Field(
+        default="", validation_alias=AliasChoices("FIREBASE_CREDENTIALS_JSON", "FIREBASE_SERVICE_ACCOUNT_JSON")
+    )
+    firestore_data_collection: str = "data"
+    firestore_conversations_collection: str = "conversations"
+
     law_api_base: str = "http://www.law.go.kr/DRF"
     default_keywords: list[str] = [
         "계약",

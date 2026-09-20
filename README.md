@@ -75,6 +75,7 @@ httpx의 기본 `response.json()`은 UTF-8을 가정하기 때문에 오류 없�
 | `DEFAULT_START_DATE` / `DEFAULT_END_DATE` | 기본값 있음 | `--start-date`/`--end-date`를 지정하지 않았을 때 `collect_precedents.py`가 사용하는 기본 수집 기간 (`2016-01-01` ~ `2026-12-31`). |
 | `FORECAST_HORIZON` | 기본값 있음 (`6`) | `run_forecast.py`가 예측하는 개월 수. |
 | `RUN_INTEGRATION_TESTS` | 기본값 있음 (`false`) | `true`로 설정하면 테스트 스위트에서 law.go.kr에 대한 최소한의 실제 네트워크 통합 테스트를 허용합니다. |
+| `FIREBASE_CREDENTIALS_JSON` | 선택 | Firestore 연동(분석 데이터/대화 기록 저장)을 활성화합니다. Firebase 콘솔에서 발급받은 서비스 계정 키 JSON 파일의 **전체 내용을 한 줄로** 붙여넣으세요. 키 파일 자체는 절대 레포에 커밋하지 않습니다. 비워두면 Firestore 없이도 전체 기능이 정상 동작합니다. |
 
 ## 설치
 
@@ -267,6 +268,36 @@ uv run python -c "import mcp_server, asyncio; print(asyncio.run(mcp_server.mcp.c
   `localStorage`에 저장되어 다음 방문 시에도 유지됩니다 (Tailwind v4의
   `@custom-variant dark` + `.dark` 클래스 전략, `layout.tsx`의 초기화
   스크립트로 첫 렌더링 시 깜빡임 방지).
+
+### 3) Firestore (Firebase) 연동
+
+Google Cloud Firestore를 사용해 분석 데이터와 대화 기록을 영구 저장합니다.
+
+**서비스 계정 키 관리:** 키 파일을 레포에 커밋하지 않고, Firebase 콘솔에서
+발급받은 서비스 계정 키 JSON 전체 내용을 `FIREBASE_CREDENTIALS_JSON`
+환경변수 하나에 문자열로 저장합니다 (`app/config.py`가 `.env`에서 읽음).
+`app/infrastructure/firestore_client.py`가 이 값을 `json.loads()`로 파싱해
+`firebase_admin.credentials.Certificate()`에 전달하는 방식이라 서버리스
+배포 환경(Render/Vercel 등)에도 파일 없이 배포할 수 있습니다. 값이 없거나
+잘못돼도 앱은 크래시하지 않고 해당 기능만 "not configured"로 비활성화됩니다
+(`OPENAI_API_KEY`와 동일한 선택적 연동 원칙).
+
+**컬렉션 구조:**
+
+| 컬렉션 | 문서 ID | 용도 | 쓰는 곳 |
+|---|---|---|---|
+| `data` | 분석 실행 시각(`collected_at`) | 파이프라인 실행 결과 스냅샷(전체 판례 수, 월별/연별 추이, 통계, forecast 지표)을 타임스탬프별로 누적 저장 — 재실행해도 기존 기록을 덮어쓰지 않음 | `backend/scripts/sync_firestore.py` → `firestore_service.save_analysis_snapshot()` |
+| `conversations` | 자동 생성 UUID | `/api/v1/chat` 한 턴(질문, 호출된 도구, 최종 답변, `session_id`, 타임스탬프)을 매번 기록 | `chat_service.run_chat()` → `firestore_service.save_conversation_turn()` (best-effort — Firestore 오류가 채팅 응답 자체를 막지 않음) |
+
+조회 API: `GET /api/v1/firestore/status` (연동 상태), `GET
+/api/v1/conversations?session_id=...` (해당 세션의 대화 기록 조회).
+
+**동기화 실행:**
+```powershell
+cd backend
+uv run python scripts/sync_firestore.py
+```
+또는 `make sync-firestore`.
 
 ## 구현 노트 (실제 데이터 실행 중 수정한 사항)
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.infrastructure.llm_client import LlmUnavailableError, call_openai_with_tools
+from app.services.firestore_service import save_conversation_turn
 from app.services.tools_service import TOOL_FUNCTIONS, TOOL_SPECS
 
 SYSTEM_PROMPT = """You are a data-analysis assistant for the Legal Trend Radar dashboard,
@@ -28,7 +29,7 @@ Rules:
 """
 
 
-def run_chat(user_message: str) -> dict[str, Any]:
+def run_chat(user_message: str, session_id: str = "default") -> dict[str, Any]:
     def executor(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         fn = TOOL_FUNCTIONS.get(name)
         if fn is None:
@@ -37,8 +38,25 @@ def run_chat(user_message: str) -> dict[str, Any]:
 
     try:
         result = call_openai_with_tools(SYSTEM_PROMPT, user_message, TOOL_SPECS, executor)
-        return {"available": True, "answer": result["answer"], "tool_calls": result["tool_calls"], "reason": None}
+        response = {
+            "available": True,
+            "answer": result["answer"],
+            "tool_calls": result["tool_calls"],
+            "reason": None,
+        }
     except LlmUnavailableError as exc:
-        return {"available": False, "answer": None, "tool_calls": [], "reason": str(exc)}
+        response = {"available": False, "answer": None, "tool_calls": [], "reason": str(exc)}
     except Exception as exc:  # never crash the API on LLM/tool failure
-        return {"available": False, "answer": None, "tool_calls": [], "reason": f"chat failed: {exc}"}
+        response = {"available": False, "answer": None, "tool_calls": [], "reason": f"chat failed: {exc}"}
+
+    # Best-effort persistence to Firestore's `conversations` collection - a
+    # Firestore outage/misconfiguration must never break the chat response
+    # itself, so this failure is swallowed inside save_conversation_turn.
+    save_conversation_turn(
+        session_id=session_id,
+        user_message=user_message,
+        answer=response["answer"],
+        tool_calls=response["tool_calls"],
+        available=response["available"],
+    )
+    return response

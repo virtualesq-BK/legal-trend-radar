@@ -7,6 +7,7 @@ from app.api.routes import (
     anomalies,
     chat,
     export,
+    firestore,
     forecast,
     health,
     insights,
@@ -40,3 +41,4 @@ app.include_router(insights.router)
 app.include_router(statistics.router)
 app.include_router(export.router)
 app.include_router(chat.router)
+app.include_router(firestore.router)

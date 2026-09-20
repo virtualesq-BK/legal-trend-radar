@@ -13,4 +13,5 @@ def health():
         "status": "ok",
         "law_api_configured": bool(settings.law_api_oc),
         "openai_configured": bool(settings.openai_api_key),
+        "firestore_configured": bool(settings.firebase_credentials_json),
     }

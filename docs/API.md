@@ -26,7 +26,9 @@ a raw 500 when data is missing.
 | POST | `/api/v1/collect` | Guidance response pointing to the CLI collector (long-running collection is intentionally not run synchronously over HTTP) |
 | GET | `/api/v1/data/statistics` | Enriched stats: median, std dev, full-period growth rate, anomaly rate, peak/trough month |
 | GET | `/api/v1/export/monthly?format=csv\|json` | Download the monthly trend table as a file (`Content-Disposition: attachment`) |
-| POST | `/api/v1/chat` | Body `{"message": "..."}`. GPT function-calling endpoint - the model calls one or more tools from `app/services/tools_service.py` to fetch real data before answering. Returns `{"answer", "tool_calls": [{"name","arguments","error"}]}`. Requires `OPENAI_API_KEY`; returns 503 `[BLOCKED]` otherwise. See README "보너스 과제" for the full call-flow walkthrough. |
+| POST | `/api/v1/chat` | Body `{"message": "...", "session_id": "default"}`. GPT function-calling endpoint - the model calls one or more tools from `app/services/tools_service.py` to fetch real data before answering. Returns `{"answer", "tool_calls": [{"name","arguments","error"}]}`. Requires `OPENAI_API_KEY`; returns 503 `[BLOCKED]` otherwise. Each turn is also best-effort persisted to Firestore's `conversations` collection if configured. See README "보너스 과제" for the full call-flow walkthrough. |
+| GET | `/api/v1/firestore/status` | Whether Firestore (`FIREBASE_CREDENTIALS_JSON`) is configured and reachable |
+| GET | `/api/v1/conversations?session_id=...` | Read back a chat session's history from Firestore's `conversations` collection (503 `[BLOCKED]` if Firestore isn't configured) |
 
 Interactive OpenAPI docs are available at `/docs` when the server is running.
 
