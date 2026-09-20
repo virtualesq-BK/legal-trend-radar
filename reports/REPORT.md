@@ -1,79 +1,79 @@
-# Legal Trend Radar - Analysis Report
+# Legal Trend Radar - 분석 보고서
 
-_Generated: 2026-09-19T21:47:34.704942Z_
+_생성 시각: 2026-09-20T09:11:07.812428+00:00Z_
 
-## 1. Topic
+## 1. 주제
 
-Time-series analysis of contract-related Korean court precedent (판례) search-result volume from 국가법령정보센터 (law.go.kr) Open API.
+국가법령정보센터(law.go.kr) Open API에서 수집한 계약 관련 한국 법원 판례(判例) 검색결과 건수에 대한 시계열 분석.
 
-## 2. Purpose
+## 2. 목적
 
-Quantify how often contract-related legal issues appear in the public precedent database over time, detect anomalies, and produce a short-term statistical forecast - strictly as descriptive/statistical analysis, not legal advice or litigation prediction.
+계약 관련 법률 이슈가 공개 판례 데이터베이스에 시간에 따라 얼마나 자주 등장하는지 정량화하고, 이상치를 탐지하며, 단기 통계적 forecast를 생성한다 - 어디까지나 서술적·통계적 분석이며, 법률 자문이나 소송 결과 예측이 아니다.
 
-## 3. Research Questions
+## 3. 연구 질문
 
-- Q1. How has contract-related precedent volume changed over the last 10 years?
-- Q2. How have related legal issues (계약해제/계약해지/손해배상/위약금/채무불이행) trended over time?
-- Q3. Are there periods of abnormal spikes/drops?
-- Q4. Short-term fluctuation vs long-term trend?
-- Q5. Simple statistical forecast for next few months?
+- Q1. 최근 10년간 계약 관련 판례 발생 건수는 어떻게 변화했는가?
+- Q2. 계약해제/계약해지/손해배상/위약금/채무불이행 등 관련 법률 이슈는 시간에 따라 어떻게 변화했는가?
+- Q3. 특정 시점에 판례가 비정상적으로 증가하거나 감소한 기간이 존재하는가?
+- Q4. 관찰된 변화가 단기적인 변동인지 장기적인 추세인지 확인할 수 있는가?
+- Q5. 향후 몇 개월의 판례 건수에 대한 단순 통계적 forecast를 할 수 있는가?
 
-## 4. Data Source
+## 4. 데이터 출처
 
-국가법령정보센터 (law.go.kr) Open API - `lawSearch.do?target=prec` (list) and `lawService.do?target=prec` (detail). See docs/DATA_SOURCE.md.
+국가법령정보센터(law.go.kr) Open API - `lawSearch.do?target=prec`(목록), `lawService.do?target=prec`(상세). 자세한 내용은 docs/DATA_SOURCE.md 참고.
 
-## 5. Collection
+## 5. 데이터 수집
 
-Total monthly-aggregated records: 3133. Keywords: 계약, 계약해제, 계약해지, 손해배상, 위약금, 채무불이행. Range: 2016-01-01 to 2026-12-31.
+월별 집계된 총 레코드 수: 3133건. 키워드: 계약, 계약해제, 계약해지, 손해배상, 위약금, 채무불이행. 기간: 2016-01-01 ~ 2026-12-31.
 
-## 6. Cleaning
+## 6. 데이터 정제
 
-Deduplicated by `precedent_id` (fallback: case_number+decision_date+case_name). Dates parsed defensively; invalid dates excluded from date-indexed series but retained in the raw processed table.
+`precedent_id` 기준으로 중복 제거 (없을 경우 case_number+decision_date+case_name으로 대체). 날짜는 방어적으로 파싱했으며, 유효하지 않은 날짜는 날짜 기준 시계열에서는 제외하되 원본 처리 테이블에는 그대로 유지했습니다.
 
-## 7. Basic Statistics
+## 7. 기본 통계
 
-- Months covered: 128
-- Mean monthly count: 24.5
-- Max monthly count: 40
-- Min monthly count: 2
+- 관측 개월 수: 128
+- 월평균 건수: 24.5
+- 월 최댓값: 40
+- 월 최솟값: 2
 
-## 8. Time-Series Analysis (Monthly / MA / YoY / Volatility)
+## 8. 시계열 분석 (월별 / 이동평균 / YoY / 변동성)
 
-3-month and 12-month moving averages, year-over-year percent change (periods=12), and rolling volatility (std) were computed. See `backend/data/analysis/monthly_trend.csv` and the dashboard Trend chart.
+3개월 및 12개월 이동평균, 전년 동월 대비 증감률(periods=12), 롤링 변동성(표준편차)을 계산했습니다. `backend/data/analysis/monthly_trend.csv`와 대시보드의 추세 차트를 참고하세요.
 
-## 9. Anomaly Detection
+## 9. 이상치 탐지
 
-Z-score (threshold=2.0) and IQR (k=1.5) methods flagged 7 anomalous method-period combinations out of 256. See `backend/data/analysis/anomalies.csv`.
+Z-score(threshold=2.0) 및 IQR(k=1.5) 방법으로 총 256개의 방법-기간 조합 중 7개를 이상치로 플래그했습니다. `backend/data/analysis/anomalies.csv` 참고.
 
-## 10. STL Decomposition
+## 10. STL 시계열 분해
 
-STL (period=12, robust=True) decomposition separates observed counts into trend, seasonal, and residual components. See `reports/figures/decomposition.png`.
+STL(period=12, robust=True) 분해를 통해 관측값을 추세(trend), 계절성(seasonal), 잔차(residual) 성분으로 분리했습니다. `reports/figures/decomposition.png` 참고.
 
 ## 11. Forecast
 
-Best model selected by validation RMSE (chronological split): **arima**. See `backend/data/analysis/forecast_metrics.csv` and `reports/figures/forecast.png`.
+검증 RMSE(시간순 분할) 기준으로 선택된 최적 모델: **arima**. `backend/data/analysis/forecast_metrics.csv`와 `reports/figures/forecast.png` 참고.
 
-> Disclaimer: This forecast is a statistical extrapolation of past precedent-search counts. It is NOT a legal or litigation prediction.
+> 고지: 본 forecast는 과거 판례 검색 건수에 대한 통계적 추정값이며, 법률적 예측이나 소송 결과 예측이 아닙니다.
 
-## 12. Key Insights
+## 12. 핵심 인사이트
 
-Each insight separates the **Observation** (a fact directly read from the data), from **Interpretation** (analyst reasoning), with an explicit **Caution**.
+각 인사이트는 데이터에서 직접 읽은 사실인 **관측(Observation)**과, 분석가의 추론인 **해석(Interpretation)**을 명시적인 **주의(Caution)**와 함께 구분합니다.
 
-1. **Observation:** Monthly precedent-search counts vary considerably month to month. **Evidence:** rolling volatility column in `monthly_trend.csv`. **Interpretation:** short-term spikes may reflect batch publication by courts rather than a change in real litigation activity. **Caution:** correlation with real-world litigation is not established.
+1. **관측:** 월별 판례 검색 건수는 달마다 상당한 편차를 보입니다. **근거:** `monthly_trend.csv`의 롤링 변동성(volatility) 컬럼. **해석:** 단기 급등은 실제 소송 활동 변화보다 법원의 일괄 공개(batch publication)를 반영할 수 있습니다. **주의:** 실제 소송 발생과의 상관관계는 확인되지 않았습니다.
 
-2. **Observation:** Long-run moving averages (12M) move more smoothly than raw monthly counts. **Evidence:** `ma_12m` column. **Interpretation:** a longer-horizon trend exists independent of monthly noise. **Caution:** trend direction alone does not indicate cause.
+2. **관측:** 장기 이동평균(12개월)은 원본 월별 건수보다 훨씬 완만하게 움직입니다. **근거:** `ma_12m` 컬럼. **해석:** 월별 노이즈와 무관한 장기 추세가 존재함을 시사합니다. **주의:** 추세 방향만으로는 원인을 알 수 없습니다.
 
-3. **Observation:** Z-score/IQR methods flag a small number of extreme months. **Evidence:** `anomalies.csv`. **Interpretation:** these may correspond to database re-indexing events, not real spikes in disputes. **Caution:** always cross-check anomaly months against known law.go.kr publication-schedule changes before drawing conclusions.
+3. **관측:** Z-score/IQR 방법이 소수의 극단적인 달을 이상치로 플래그합니다. **근거:** `anomalies.csv`. **해석:** 이는 실제 분쟁 급증이 아니라 데이터베이스 재색인(re-indexing) 이벤트에 해당할 수 있습니다. **주의:** 결론을 내리기 전에 이상치로 표시된 월을 law.go.kr의 알려진 공개 일정 변경 사항과 반드시 교차 확인해야 합니다.
 
-## 13. AI Interpretation
+## 13. AI 해석
 
-If `OPENAI_API_KEY` is configured, `GET /api/v1/insights` returns an LLM-generated summary built ONLY from aggregated statistics (never raw case text), explicitly labeled and separated from the observed-fact sections above. See docs/AI_USAGE_LOG.md.
+`OPENAI_API_KEY`가 설정된 경우, `GET /api/v1/insights`는 오직 집계된 통계만을 근거로(원본 판례 본문은 절대 사용하지 않음) LLM이 생성한 요약을 반환하며, 위의 관측된 사실 섹션과 명확히 구분되어 표시됩니다. docs/AI_USAGE_LOG.md 참고.
 
-## 14. Limitations
+## 14. 한계점
 
-**Precedent count increase does NOT equal actual litigation increase.** Confounders include: (a) search term composition and keyword overlap, (b) law.go.kr database coverage changes over time, (c) court publication practices (not all rulings are published), (d) shifting composition of courts contributing data, (e) changes to the search system itself (indexing, tokenization), and (f) the same underlying case may be counted more than once across repeated/overlapping keyword searches despite deduplication by ID.
+**판례 건수 증가는 실제 소송 발생 증가를 의미하지 않습니다.** 교란 요인으로는: (a) 검색어 구성 및 키워드 중복, (b) 시간에 따른 law.go.kr 데이터베이스 커버리지 변화, (c) 법원의 공개 관행(모든 판결이 공개되는 것은 아님), (d) 데이터를 제공하는 법원 구성의 변화, (e) 검색 시스템 자체의 변경(색인 방식, 토큰화), (f) ID 기준 중복 제거에도 불구하고 동일 사건이 중복/중첩되는 키워드 검색으로 여러 번 집계될 가능성 등이 있습니다.
 
-## 15. Reproducibility
+## 15. 재현 방법
 
 ```bash
 python backend/scripts/collect_precedents.py --start-date 2016-01-01 --end-date 2026-12-31
@@ -85,10 +85,10 @@ python backend/scripts/run_forecast.py
 python backend/scripts/generate_report.py
 ```
 
-## 16. AI Usage Log
+## 16. AI 사용 로그
 
-See docs/AI_USAGE_LOG.md for the full log of how AI assistance was used to build this project.
+이 프로젝트를 구축하는 데 AI를 어떻게 활용했는지에 대한 전체 로그는 docs/AI_USAGE_LOG.md를 참고하세요.
 
-## 17. Legal Disclaimer
+## 17. 법률 고지
 
-This report and the accompanying dashboard/API are for statistical and educational purposes only. They are **NOT legal advice**, do not predict litigation outcomes, and must not be relied upon for any legal decision. Consult a licensed attorney for legal advice.
+본 보고서와 이에 수반되는 대시보드/API는 통계적·교육적 목적으로만 제공됩니다. 이는 **법률 자문이 아니며**, 소송 결과를 예측하지 않고, 어떠한 법률적 판단의 근거로도 사용되어서는 안 됩니다. 법률 자문이 필요한 경우 자격을 갖춘 변호사와 상담하시기 바랍니다.

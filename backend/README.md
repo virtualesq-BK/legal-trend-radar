@@ -1,10 +1,10 @@
 # Legal Trend Radar - Backend
 
-FastAPI + pandas/statsmodels backend that collects, normalizes, and analyzes
-Korean court precedent search-result data from law.go.kr. See the repo-root
-README for full setup instructions.
+law.go.kr에서 한국 법원 판례 검색결과 데이터를 수집·정규화·분석하는
+FastAPI + pandas/statsmodels 백엔드입니다. 전체 설정 방법은 레포 루트의
+README를 참고하세요.
 
-Quick start (PowerShell):
+빠른 시작 (PowerShell):
 ```powershell
 cd backend
 uv sync --extra dev
@@ -12,7 +12,7 @@ uv run pytest -q
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
-If `uv` is unavailable, fall back to:
+`uv`를 사용할 수 없는 경우:
 ```powershell
 cd backend
 python -m venv .venv
