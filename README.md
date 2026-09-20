@@ -328,6 +328,22 @@ uv run python scripts/sync_firestore.py
    응답에서 마크다운 코드펜스를 제거한 뒤 JSON을 파싱하므로, 엄격한
    OpenAI든 관대한 프록시든 OpenAI 비호환 게이트웨이든 특정 제공자를
    가정하지 않고 동작합니다.
+5. **`FIREBASE_CREDENTIALS_JSON`은 반드시 한 줄이어야 합니다.** `.env`
+   파서(`python-dotenv`)는 값이 줄바꿈 없이 한 줄에 있어야 읽습니다.
+   Firebase 콘솔에서 받은 키 JSON 파일을 줄바꿈이 살아있는 상태로 그대로
+   붙여넣으면 `{` 한 글자만 읽히고 나머지 줄은 조용히 무시됩니다(에러 없이
+   `Firestore not configured`로만 보임 — 원인 파악이 어려움). 붙여넣기 전에
+   반드시 JSON을 한 줄로 압축(minify)하세요, 예:
+   `python -c "import json,sys; print(json.dumps(json.load(open('key.json'))))"`.
+   (참고: `private_key` 필드 내부의 `\n`은 이미 JSON 문자열 이스케이프이므로
+   문제가 되지 않습니다 — 문제는 오직 최상위 JSON 객체 `{...}` 자체가 여러
+   줄에 걸쳐 있을 때입니다.)
+6. **Firestore 복합 인덱스 없이 조회하도록 설계.** 처음에는
+   `list_conversation_history()`가 `.where("session_id", ...).order_by("timestamp")`를
+   함께 사용했는데, 이는 Firestore 콘솔에서 수동으로 복합 인덱스를 생성해야만
+   동작합니다(`FAILED_PRECONDITION: The query requires an index`). 별도
+   설정 없이 바로 동작하도록 `session_id`만으로 필터링(단일 필드는 자동
+   인덱싱됨)한 뒤 결과를 Python에서 정렬하도록 수정했습니다.
 
 ## 테스트
 

@@ -87,14 +87,18 @@ def list_conversation_history(session_id: str, limit: int = 20) -> dict[str, Any
         return {"available": False, "reason": str(exc), "turns": []}
 
     try:
-        query = (
-            client.collection(settings.firestore_conversations_collection)
-            .where("session_id", "==", session_id)
-            .order_by("timestamp", direction="DESCENDING")
-            .limit(limit)
+        # Filter on session_id only (single-field, auto-indexed by Firestore)
+        # and sort/limit in Python instead of chaining .order_by() - a
+        # composite (session_id, timestamp) index would otherwise need to be
+        # created manually in the Firebase console before this query works.
+        from google.cloud.firestore_v1.base_query import FieldFilter
+
+        query = client.collection(settings.firestore_conversations_collection).where(
+            filter=FieldFilter("session_id", "==", session_id)
         )
         turns = [doc.to_dict() for doc in query.stream()]
-        turns.reverse()
+        turns.sort(key=lambda t: t.get("timestamp", ""))
+        turns = turns[-limit:]
         return {"available": True, "reason": None, "turns": turns}
     except Exception as exc:  # noqa: BLE001
         return {"available": False, "reason": f"Firestore read failed: {exc}", "turns": []}
